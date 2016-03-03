@@ -1,0 +1,34 @@
+==========================
+= PL HANDIN CLIENT (CLI) =
+==========================
+
+Dependencies:
+  (-) Racket
+  (-) pl.plt (Found on pl.barzilay.org)
+
+Installation:
+  First, run the following:
+
+    raco install pkg git://github.com/belph/pl-handin-cli.git
+
+  After installation, there should be a message about
+  ensuring that a certain directory is on your PATH, so
+  be sure to do so.
+
+Example Usage:
+  See `pl-handin --help' and `pl-retrieve --help' for more information.
+  
+  Handing in:
+    # Will prompt for all information
+    pl-handin <filename>.rkt
+    # Can pass some information as arguments
+    pl-handin --username <USER> --assignment <ASSIGNMENT> <filename>.rkt
+    # Shortened arguments
+    pl-handin -u <USER> -a <ASSIGNMENT> <filename>.rkt
+
+  Retrieving:
+    pl-retrieve <dest-file>.rkt
+    pl-retrieve -a <ASSIGNMENT> <dest-file>.rkt
+
+Emacs Integration:
+  Coming soon!
