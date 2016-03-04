@@ -189,26 +189,22 @@
 (define (on-break exn)
   (let ([go? (begin
                (semaphore-wait commit-lock)
-               (if committing?
+               (or committing?
                    (begin
                      (semaphore-post commit-lock)
-                     (if (call/cc abort-commit-dialogue)
-                         #t
-                         ((exn:break-continuation exn))))
-                   #t))])
+                     (or (abort-commit-dialogue)
+                         ((exn:break-continuation exn))))))])
     (when go?
       (custodian-shutdown-all comm-cust)
       (exit 0))))
 
 ;; Prompts the user if they are aborting mid-commit
-(define (abort-commit-dialogue continue-abort)
+(define (abort-commit-dialogue)
   (displayln/err "The commit action is in progress.")
   (displayln/err "Cancelling now may or may not work.")
   (displayln/err "Cancel anyway?")
   (let ((choice (prompt '("Continue Commit" "Try to Cancel"))))
-    (if (equal? choice "Continue Commit")
-        (continue-abort #f)
-        (continue-abort #t))))
+    (not (equal? choice "Continue Commit"))))
 
 ;; Displays error messages
 (define (report-error tag exn)
@@ -274,22 +270,21 @@
       (close-output-port file)))
   (retrieve-file username password assignment on-retrieve))
 
-(define (overwrite-prompt filename k)
-  (k (prompt-bool (format "File `~a' already exists. Overwrite?" filename)
-                  #:default #f)))
+(define (overwrite-prompt filename)
+  (prompt-bool (format "File `~a' already exists. Overwrite?" filename)
+               #:default #f))
 
 (define (open-output-file/safe path #:overwrite? (always-overwrite? #f))
   (define (open-with-flag exists-flag)
     (open-output-file path #:exists exists-flag))
   (define (open/overwrite) (open-with-flag 'replace))
   (define (open/error)
-    (open-with-flag (if (call/cc maybe-prompt)
+    (open-with-flag (if (maybe-prompt)
                         'replace
                         'error)))
-  (define (maybe-prompt k)
-    (if (file-exists? path)
-        (overwrite-prompt path k)
-        (k #f)))
+  (define (maybe-prompt)
+    (and (file-exists? path)
+         (overwrite-prompt path)))
   (if always-overwrite?
       (open/overwrite)
       (open/error)))
