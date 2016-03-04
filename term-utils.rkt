@@ -1,11 +1,11 @@
 #lang racket/base
 (require racket/match syntax/location)
 (provide read-password)
-;; FIXME: Shared object resolution needs to be more robust
+
 (module windows-utils racket/base
   (require ffi/unsafe)
   (provide getwch)
-  (define MSVCRT (ffi-lib "C:\\Windows\\System32\\msvcrt"))
+  (define MSVCRT (ffi-lib "msvcrt"))
   (define getwch/raw
     (get-ffi-obj "_getch" MSVCRT (_fun -> _int)
                  (lambda ()
@@ -17,7 +17,7 @@
 (module nix-utils racket/base
   (require ffi/unsafe)
   (provide getwch)
-  (define LIBCURSES (ffi-lib "/usr/lib64/libcurses"))
+  (define LIBCURSES (ffi-lib "libcurses"))
   (define getwch/raw
     (get-ffi-obj "getch" LIBCURSES (_fun -> _int)
                  (lambda ()
