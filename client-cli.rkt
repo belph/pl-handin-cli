@@ -1,7 +1,7 @@
 #lang racket/base
 (require pl/info pl/client
          net/sendurl racket/file racket/list wxme racket/gui
-         racket/class racket/exn)
+         racket/class racket/exn "term-utils.rkt")
 
 (provide (rename-out [init-and-submit   pl-submit]
                      [init-and-retrieve pl-retrieve])
@@ -47,8 +47,8 @@
 
 ;; Like (read), but makes sure to consume a line of input
 ;; (if the line is empty, returns #f)
-(define (read/read-line (port (current-input-port)))
-  (let ([line (read-line port)])
+(define (read/read-line #:reader (reader read-line))
+  (let ([line (reader)])
     (and (not (equal? eof line))
          (> (string-length line) 0)
          (read (open-input-string line)))))
@@ -127,13 +127,12 @@
                  (loop (read/read-line)))))))
 
 
-;; stty functionality adapted from
+;; tty check adapted from
 ;; http://lists.racket-lang.org/users/archive/2003-January/001719.html
 
 ;; Attempt at cross-platform compatability
 (define on-windows? (eq? (system-type) 'windows))
 (define tty-prog  (if on-windows? "tty.exe"  "tty"))
-(define stty-prog (if on-windows? "stty.exe" "stty"))
 
 ;; Is this program being run on the command line?
 (define tty?
@@ -148,41 +147,21 @@
     (subprocess-wait p)
     (zero? (subprocess-status p))))
 
-;; Execute the following with stty
-(define (stty . args)
-  (let*-values
-      (((p pout pin perr)
-        (apply subprocess
-               #f
-               (current-input-port)
-               (current-error-port)
-               (find-executable-path stty-prog #f)
-               args)))
-    (begin0 (read-line pout) (subprocess-wait p))))
-
 ;; Like prompt-input, except hides the input from view
 (define (prompt-password #:text (prompt-text #f))
-  ;; Can only use stty if we're running on the command line
-  (unless tty? (error "Cannot read password on non-tty"))
   ;; Capture existing stty settings to restore later
-  (let ((tty-settings (stty "-g"))
-        (prompt-text (or prompt-text "Password")))
+  (let ((prompt-text (or prompt-text "Password")))
     (define (display-prompt)
-      ;; Show output, display, re-hide output
-      (stty tty-settings)
       (display/f "~a: " prompt-text)
-      (flush-output)
-      (stty "-echo"))
+      (flush-output))
     ;; Shows prompt and gets a user password
     (define (prompt-and-read)
       (display-prompt)
-      (read/read-line))
+      (read/read-line #:reader read-password))
     (let ((password (let loop ((input (prompt-and-read)))
                       (or input
                           (begin (loop (prompt-and-read)))))))
       ;; Restore stty settings
-      (stty tty-settings)
-      (display "\n") ;; User hitting enter doesn't move to next line due to -echo
       (format "~a" password))))
 
 ;; Handle C-c presses
